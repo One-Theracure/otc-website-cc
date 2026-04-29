@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Theracure — The Workflow Layer for Modern Healthcare Delivery</title>
+<meta name="description" content="One Theracure helps providers reduce documentation burden, improve patient communication, and operate with greater structure and continuity.">
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<!-- React + Babel via CDN -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+<style>
+/* ─── Gotham Font ─── */
+@font-face { font-family:'Gotham'; src:url('./fonts/Gotham-Light.otf') format('opentype'); font-weight:300; font-display:swap; }
+@font-face { font-family:'Gotham'; src:url('./fonts/Gotham-Book.otf') format('opentype'),url('./fonts/GothamBook.ttf') format('truetype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Gotham'; src:url('./fonts/Gotham-Bold.otf') format('opentype'),url('./fonts/GothamBold.ttf') format('truetype'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Gotham'; src:url('./fonts/Gotham-Bold.otf') format('opentype'),url('./fonts/GothamBold.ttf') format('truetype'); font-weight:500 600; font-display:swap; }
+
+/* ─── Design Tokens ─── */
+:root {
+  --brand-navy:         #1c2c72;
+  --brand-navy-dark:    #111d54;
+  --brand-navy-light:   #6b8ce8;
+  --brand-accent:       #4a7fb5;
+  --brand-accent-light: #d4e4f5;
+  --fg-1:   #0d1633;
+  --fg-2:   #3d4d74;
+  --fg-3:   #8892b0;
+  --fg-inv: #ffffff;
+  --bg-1:   #ffffff;
+  --bg-2:   #f5f7fc;
+  --bg-3:   #edf0f9;
+  --bg-dark: #111d54;
+  --border:        #dde3f0;
+  --border-strong: #b0bddc;
+  --success:    #2e7d52;
+  --success-bg: #ecfdf5;
+  --font-sans:    'Gotham', 'Montserrat', system-ui, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+  --shadow-xs: 0 1px 3px rgba(28,44,114,0.06);
+  --shadow-sm: 0 2px 8px rgba(28,44,114,0.08);
+  --shadow-md: 0 4px 16px rgba(28,44,114,0.12);
+  --shadow-lg: 0 8px 32px rgba(28,44,114,0.16);
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+  --transition-base: all 0.2s ease;
+  --transition-slow: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { font-family: var(--font-sans); background: var(--bg-1); color: var(--fg-1); overflow-x: hidden; }
+a { color: var(--brand-navy); text-decoration: none; transition: var(--transition-base); }
+a:hover { color: var(--brand-navy-light); }
+img { display: block; max-width: 100%; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-2); }
+::-webkit-scrollbar-thumb { background: var(--brand-navy); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─────────────────────────────────────────────────────────────
+// HEADER
+// ─────────────────────────────────────────────────────────────
+const Header = ({ activeSection, onNav }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const links = [
+    { id: 'home',      label: 'Home' },
+    { id: 'about',     label: 'About' },
+    { id: 'solutions', label: 'Solutions' },
+    { id: 'team',      label: 'Team' },
+    { id: 'contact',   label: 'Contact' },
+  ];
+
+  const headerBg = scrolled ? 'rgba(255,255,255,0.97)' : 'transparent';
+  const textColor = (active) =>
+    scrolled
+      ? (active ? '#1c2c72' : '#3d4d74')
+      : (active ? '#fff'    : 'rgba(255,255,255,0.72)');
+
+  return (
+    <header style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+      height: 68, padding: '0 40px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: headerBg,
+      backdropFilter: scrolled ? 'blur(12px)' : 'none',
+      WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
+      borderBottom: scrolled ? '1px solid #dde3f0' : 'none',
+      transition: 'all 0.3s ease',
+    }}>
+      {/* Logo */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+        onClick={() => onNav('home')}
+        role="button"
+        aria-label="Go to homepage"
+      >
+        <img src="./assets/stationery-09.png" alt="One Theracure" style={{ height: 36 }} />
+        <span style={{
+          fontFamily: 'Gotham,sans-serif', fontSize: 16, fontWeight: 700,
+          color: scrolled ? '#1c2c72' : 'rgba(255,255,255,0.9)',
+          letterSpacing: '-0.01em', transition: 'color 0.3s',
+        }}>
+          <span style={{ fontWeight: 400 }}>one</span><strong style={{ fontWeight: 700 }}>theracure</strong>
+        </span>
+      </div>
+
+      {/* Desktop nav */}
+      <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+        {links.map(l => {
+          const active = activeSection === l.id;
+          return (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              onClick={e => { e.preventDefault(); onNav(l.id); setMenuOpen(false); }}
+              style={{
+                fontFamily: 'Gotham,sans-serif', fontSize: 14,
+                fontWeight: active ? 600 : 400,
+                color: textColor(active),
+                textDecoration: 'none', transition: 'color .2s',
+                borderBottom: active ? `2px solid ${scrolled ? '#1c2c72' : '#fff'}` : '2px solid transparent',
+                paddingBottom: 2,
+              }}
+              aria-current={active ? 'page' : undefined}
+            >
+              {l.label}
+            </a>
+          );
+        })}
+        <button
+          onClick={() => onNav('contact')}
+          style={{
+            fontFamily: 'Gotham,sans-serif', fontSize: 14, fontWeight: 600,
+            background: '#1c2c72', color: '#fff', border: 'none', cursor: 'pointer',
+            padding: '9px 22px', borderRadius: '9999px', transition: 'all .2s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#2d4199'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#1c2c72'; e.currentTarget.style.transform = 'none'; }}
+        >
+          Book a demo
+        </button>
+      </nav>
+    </header>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// HERO
+// ─────────────────────────────────────────────────────────────
+const Hero = ({ onNav }) => (
+  <section id="home" style={{
+    minHeight: '100vh', width: '100%',
+    background: 'linear-gradient(135deg, #111d54 0%, #1c2c72 50%, #2d4199 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'column', textAlign: 'center',
+    padding: '120px 40px 80px',
+    position: 'relative', overflow: 'hidden',
+  }}>
+    {/* Background circles */}
+    <div style={{ position:'absolute', top:-120, right:-120, width:500, height:500, borderRadius:'50%', background:'rgba(74,127,181,0.08)', pointerEvents:'none' }} />
+    <div style={{ position:'absolute', bottom:-80, left:-80, width:350, height:350, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }} />
+
+    {/* Eyebrow pill */}
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+      borderRadius: '9999px', padding: '6px 16px', marginBottom: 32,
+    }}>
+      <span style={{ width:6, height:6, borderRadius:'50%', background:'#4a7fb5', display:'inline-block' }} />
+      <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.82)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+        Doctor-first AI platform
+      </span>
+    </div>
+
+    {/* Headline */}
+    <h1 style={{
+      fontFamily: "'DM Serif Display', Georgia, serif",
+      fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
+      fontWeight: 400, color: '#fff',
+      lineHeight: 1.15, letterSpacing: '-0.02em',
+      maxWidth: 780, marginBottom: 24,
+    }}>
+      <span style={{ color: 'rgba(255,255,255,0.55)' }}>The workflow layer for<br /></span>
+      <span style={{ color: '#4a7fb5' }}>modern healthcare delivery.</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p style={{
+      fontFamily: 'Gotham,sans-serif', fontSize: 18, fontWeight: 300,
+      color: 'rgba(255,255,255,0.7)', maxWidth: 560,
+      lineHeight: 1.7, marginBottom: 48,
+    }}>
+      One Theracure helps providers reduce documentation burden, improve patient communication,
+      and operate with greater structure and continuity.
+    </p>
+
+    {/* CTAs */}
+    <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap', justifyContent:'center' }}>
+      <button
+        onClick={() => onNav('contact')}
+        style={{
+          fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600,
+          background:'#fff', color:'#1c2c72', border:'none', cursor:'pointer',
+          padding:'14px 32px', borderRadius:'9999px', transition:'all .2s ease',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.2)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}
+      >
+        Book a demo
+      </button>
+      <button
+        onClick={() => onNav('solutions')}
+        style={{
+          fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:400,
+          background:'transparent', color:'#fff',
+          border:'1.5px solid rgba(255,255,255,0.4)', cursor:'pointer',
+          padding:'13px 32px', borderRadius:'9999px', transition:'all .2s ease',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'; e.currentTarget.style.background='rgba(255,255,255,0.06)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.4)'; e.currentTarget.style.background='transparent'; }}
+      >
+        View solutions
+      </button>
+    </div>
+
+    {/* Scroll line indicator */}
+    <div style={{ position:'absolute', bottom:36, left:'50%', transform:'translateX(-50%)', opacity:0.45 }}>
+      <div style={{ width:1, height:48, background:'linear-gradient(to bottom, transparent, #fff)', margin:'0 auto' }} />
+    </div>
+  </section>
+);
+
+// ─────────────────────────────────────────────────────────────
+// ABOUT
+// ─────────────────────────────────────────────────────────────
+const About = () => (
+  <section id="about" style={{ background:'#fff', padding:'100px 40px' }}>
+    <div style={{
+      maxWidth:1100, margin:'0 auto',
+      display:'grid', gridTemplateColumns:'1fr 1fr', gap:80, alignItems:'center',
+    }}>
+      <div>
+        <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:16 }}>About One Theracure</div>
+        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.75rem,3vw,2.75rem)', fontWeight:400, color:'#0d1633', lineHeight:1.2, letterSpacing:'-0.01em', marginBottom:24 }}>
+          Built for real care delivery.<br />Not for demos.
+        </h2>
+        <p style={{ fontFamily:'Gotham,sans-serif', fontSize:16, color:'#3d4d74', lineHeight:1.8, marginBottom:20 }}>
+          One Theracure is a doctor-first workflow platform designed to reduce documentation burden,
+          improve patient communication, and help healthcare providers operate with greater structure,
+          efficiency, and trust.
+        </p>
+        <p style={{ fontFamily:'Gotham,sans-serif', fontSize:16, color:'#8892b0', lineHeight:1.8, marginBottom:36 }}>
+          We work at the intersection of clinical reality and intelligent systems — because the best
+          technology fits the doctor, not the other way around.
+        </p>
+        <div style={{ display:'flex', gap:32 }}>
+          {[['Doctor-first','fa-user-md'], ['Institution-ready','fa-hospital'], ['India-native','fa-globe-asia']].map(([label, icon]) => (
+            <div key={label} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+              <div style={{ width:44, height:44, borderRadius:12, background:'#edf0f9', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <i className={`fas ${icon}`} style={{ fontSize:18, color:'#1c2c72' }} />
+              </div>
+              <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, fontWeight:500, color:'#3d4d74' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ position:'relative' }}>
+        <div style={{
+          background:'linear-gradient(135deg, #1c2c72 0%, #2d4199 100%)',
+          borderRadius:24, padding:'40px 36px', color:'#fff',
+          boxShadow:'0 20px 60px rgba(28,44,114,0.25)',
+        }}>
+          <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.45)', marginBottom:16 }}>Our mission</div>
+          <blockquote style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:22, fontWeight:400, color:'#fff', lineHeight:1.5, borderLeft:'3px solid #4a7fb5', paddingLeft:20, marginBottom:28 }}>
+            "One Theracure is building the workflow standard for modern healthcare delivery."
+          </blockquote>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            {[['Less chaos','More structure'], ['Less friction','More trust'], ['Less burden','More clarity'], ['Less noise','More continuity']].map(([less, more]) => (
+              <div key={less}>
+                <div style={{ fontFamily:'Gotham,sans-serif', fontSize:13, color:'rgba(255,255,255,0.4)', marginBottom:2 }}>{less}</div>
+                <div style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:600, color:'#fff' }}>{more}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Floating badge */}
+        <div style={{
+          position:'absolute', bottom:-20, left:-20,
+          background:'#fff', borderRadius:14, padding:'14px 18px',
+          boxShadow:'0 8px 24px rgba(28,44,114,0.15)',
+          display:'flex', alignItems:'center', gap:12,
+        }}>
+          <img src="./assets/logo-icon.png" style={{ height:32 }} alt="One Theracure icon" />
+          <div>
+            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:700, color:'#1c2c72' }}>Enhancing Life.</div>
+            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, color:'#8892b0' }}>onetheracure.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+// ─────────────────────────────────────────────────────────────
+// SOLUTIONS
+// ─────────────────────────────────────────────────────────────
+const SOLUTIONS = [
+  { icon:'fa-stethoscope',       title:'AI Clinical Decision Support',      desc:'AI-driven diagnosis and treatment recommendations based on clinical data.' },
+  { icon:'fa-file-medical-alt',  title:'AI Assisted EHR/EMR & AVS',         desc:'Multilingual speech-to-text for seamless, structured documentation.' },
+  { icon:'fa-user-md',           title:'Customisable AI-Generated Data',     desc:'Clinical summaries in multiple languages, easy to understand.' },
+  { icon:'fa-clipboard-check',   title:'Clinical Documentation Improvement', desc:'Accurate ICD-10 and CPT compliance coding for billing.' },
+  { icon:'fa-brain',             title:'Intelligent Pre-Charting (AutoPrep)','desc':'Predictive AI provides pre-visit context and suggestions.' },
+  { icon:'fa-notes-medical',     title:'AI Documentation for Procedures',    desc:'Automates surgical and procedural note-taking.' },
+  { icon:'fa-hospital',          title:'ABHA Integration',                   desc:'Seamless records access under Ayushman Bharat Digital Mission.' },
+];
+
+const SolutionCard = ({ icon, title, desc }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:'#fff', borderRadius:16, padding:'28px 24px',
+        border:'1px solid #edf0f9',
+        boxShadow: hovered ? '0 8px 32px rgba(28,44,114,0.14)' : '0 2px 12px rgba(28,44,114,0.07)',
+        transform: hovered ? 'translateY(-4px)' : 'none',
+        transition:'all 0.25s ease',
+        cursor:'default',
+      }}
+    >
+      <div style={{
+        width:52, height:52, borderRadius:14,
+        background: hovered ? '#1c2c72' : '#edf0f9',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        marginBottom:16, transition:'background 0.25s',
+      }}>
+        <i className={`fas ${icon}`} style={{ fontSize:20, color: hovered ? '#fff' : '#1c2c72', transition:'color .25s' }} />
+      </div>
+      <h4 style={{ fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600, color:'#0d1633', marginBottom:8, lineHeight:1.4 }}>{title}</h4>
+      <p style={{ fontFamily:'Gotham,sans-serif', fontSize:13, color:'#8892b0', lineHeight:1.65, margin:0 }}>{desc}</p>
+    </div>
+  );
+};
+
+const Solutions = () => (
+  <section id="solutions" style={{ background:'#f5f7fc', padding:'100px 40px' }}>
+    <div style={{ maxWidth:1100, margin:'0 auto' }}>
+      <div style={{ textAlign:'center', marginBottom:64 }}>
+        <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>What we build</div>
+        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.75rem,3vw,2.75rem)', fontWeight:400, color:'#0d1633', marginBottom:16, letterSpacing:'-0.01em' }}>
+          AI-powered solutions for serious care delivery
+        </h2>
+        <p style={{ fontFamily:'Gotham,sans-serif', fontSize:16, color:'#8892b0', maxWidth:540, margin:'0 auto', lineHeight:1.7 }}>
+          Every solution is designed around how doctors and institutions actually work — not how software thinks they should.
+        </p>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:20 }}>
+        {SOLUTIONS.map((s, i) => <SolutionCard key={i} {...s} />)}
+      </div>
+    </div>
+  </section>
+);
+
+// ─────────────────────────────────────────────────────────────
+// TEAM
+// ─────────────────────────────────────────────────────────────
+const TEAM = [
+  { name:'Rutik Thorat',             role:'Founder & CEO',   cred:'M.B.B.S, Grant Medical College JJ Hospital',  img:'./assets/team-rutik.png' },
+  { name:'Dr. Ramakant K. Deshpande',role:'Advisory Board',  cred:'Padma Shri · Renowned Oncologist',             img:'./assets/team-ramakant.png' },
+  { name:'Dr. Vishal Warke',         role:'Advisory Board',  cred:'MBBS, Ph.D · Director, Himedia Labs',          img:'./assets/team-vishal.png' },
+];
+
+const TeamCard = ({ name, role, cred, img }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:'#fff', borderRadius:20, padding:'32px 24px',
+        textAlign:'center', width:230,
+        boxShadow: hovered ? '0 12px 40px rgba(28,44,114,0.16)' : '0 2px 12px rgba(28,44,114,0.08)',
+        transform: hovered ? 'translateY(-6px)' : 'none',
+        transition:'all 0.3s ease',
+      }}
+    >
+      <img src={img} alt={name} style={{
+        width:88, height:88, borderRadius:'50%', objectFit:'cover',
+        border: `3px solid ${hovered ? '#1c2c72' : '#edf0f9'}`,
+        marginBottom:16, transition:'border-color .3s',
+      }} />
+      <div style={{ fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600, color:'#0d1633', marginBottom:4 }}>{name}</div>
+      <div style={{ fontFamily:'Gotham,sans-serif', fontSize:12, fontWeight:500, color:'#1c2c72', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>{role}</div>
+      <div style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'#8892b0', lineHeight:1.5 }}>{cred}</div>
+      <div style={{ marginTop:18, display:'flex', gap:12, justifyContent:'center' }}>
+        {['fab fa-linkedin','fas fa-envelope'].map(cls => (
+          <a key={cls} href="#" onClick={e => e.preventDefault()} style={{
+            width:32, height:32, borderRadius:'50%',
+            background: hovered ? '#1c2c72' : '#edf0f9',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            transition:'background .25s',
+          }}>
+            <i className={cls} style={{ fontSize:13, color: hovered ? '#fff' : '#1c2c72', transition:'color .25s' }} />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Team = () => (
+  <section id="team" style={{ background:'#fff', padding:'100px 40px' }}>
+    <div style={{ maxWidth:1100, margin:'0 auto' }}>
+      <div style={{ textAlign:'center', marginBottom:64 }}>
+        <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>The people</div>
+        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.75rem,3vw,2.75rem)', fontWeight:400, color:'#0d1633', letterSpacing:'-0.01em' }}>
+          Built by clinicians and engineers
+        </h2>
+      </div>
+      <div style={{ display:'flex', gap:24, justifyContent:'center', flexWrap:'wrap' }}>
+        {TEAM.map((m, i) => <TeamCard key={i} {...m} />)}
+      </div>
+    </div>
+  </section>
+);
+
+// ─────────────────────────────────────────────────────────────
+// CONTACT
+// ─────────────────────────────────────────────────────────────
+const Contact = () => {
+  const [form, setForm] = useState({ name:'', org:'', email:'', message:'' });
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const formEndpoint = 'https://formspree.io/f/mzdopbkq';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('org', form.org);
+    formData.append('email', form.email);
+    formData.append('message', form.message);
+
+    try {
+      const res = await fetch(formEndpoint, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: formData,
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        setForm({ name:'', org:'', email:'', message:'' });
+      } else {
+        let message = 'Something went wrong. Please try again.';
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data?.errors?.length) {
+            message = data.errors[0].message;
+          }
+        }
+        setError(message);
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inputStyle = {
+    fontFamily:'Gotham,sans-serif', fontSize:14, width:'100%',
+    padding:'11px 14px', border:'1px solid #dde3f0', borderRadius:8,
+    outline:'none', color:'#0d1633', background:'#fff', transition:'border-color .2s',
+  };
+
+  return (
+    <section id="contact" style={{ background:'#f5f7fc', padding:'100px 40px' }}>
+      <div style={{ maxWidth:800, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:56 }}>
+          <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>Get in touch</div>
+          <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.75rem,3vw,2.75rem)', fontWeight:400, color:'#0d1633', letterSpacing:'-0.01em', marginBottom:12 }}>Book a demo</h2>
+          <p style={{ fontFamily:'Gotham,sans-serif', fontSize:16, color:'#8892b0', lineHeight:1.7 }}>
+            We work with serious providers and institutions. Tell us about your workflow.
+          </p>
+        </div>
+
+        {submitted ? (
+          <div style={{ background:'#fff', borderRadius:20, padding:'60px 40px', textAlign:'center', boxShadow:'0 4px 24px rgba(28,44,114,0.1)' }}>
+            <div style={{ width:64, height:64, borderRadius:'50%', background:'#ecfdf5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
+              <i className="fas fa-check" style={{ fontSize:24, color:'#2e7d52' }} />
+            </div>
+            <h3 style={{ fontFamily:'Gotham,sans-serif', fontSize:22, fontWeight:600, color:'#0d1633', marginBottom:10 }}>Message received</h3>
+            <p style={{ fontFamily:'Gotham,sans-serif', fontSize:15, color:'#8892b0' }}>We'll be in touch within one business day.</p>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            action={formEndpoint}
+            method="POST"
+            style={{ background:'#fff', borderRadius:20, padding:'40px', boxShadow:'0 4px 24px rgba(28,44,114,0.08)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}
+          >
+            {[
+              { id:'name',  label:'Your name',        placeholder:'Dr. Priya Sharma',         span:false, type:'text' },
+              { id:'org',   label:'Clinic / hospital', placeholder:'Apollo Hospitals, Mumbai', span:false, type:'text' },
+              { id:'email', label:'Email address',     placeholder:'dr.sharma@hospital.in',    span:true,  type:'email' },
+            ].map(f => (
+              <div key={f.id} style={{ gridColumn: f.span ? 'span 2' : 'auto' }}>
+                <label style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:500, color:'#3d4d74', display:'block', marginBottom:6 }}>{f.label}</label>
+                <input
+                  type={f.type}
+                  name={f.id}
+                  placeholder={f.placeholder}
+                  value={form[f.id]}
+                  onChange={e => setForm(p => ({ ...p, [f.id]: e.target.value }))}
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#1c2c72'}
+                  onBlur={e => e.target.style.borderColor = '#dde3f0'}
+                  required
+                />
+              </div>
+            ))}
+            <div style={{ gridColumn:'span 2' }}>
+              <label style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:500, color:'#3d4d74', display:'block', marginBottom:6 }}>Describe your workflow needs</label>
+              <textarea
+                rows={4}
+                name="message"
+                placeholder="e.g. We see 80+ patients daily and need faster documentation and better follow-up summaries..."
+                value={form.message}
+                onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
+                style={{ ...inputStyle, resize:'vertical' }}
+                onFocus={e => e.target.style.borderColor = '#1c2c72'}
+                onBlur={e => e.target.style.borderColor = '#dde3f0'}
+              />
+            </div>
+            {error && (
+              <div style={{ gridColumn:'span 2', fontFamily:'Gotham,sans-serif', fontSize:13, color:'#b42318' }}>
+                {error}
+              </div>
+            )}
+            <div style={{ gridColumn:'span 2' }}>
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600,
+                  background: submitting ? '#9aa3c7' : '#1c2c72',
+                  color:'#fff', border:'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                  padding:'14px 40px', borderRadius:'9999px', transition:'all .2s',
+                  opacity: submitting ? 0.85 : 1,
+                }}
+                onMouseEnter={e => {
+                  if (submitting) return;
+                  e.currentTarget.style.background='#2d4199';
+                  e.currentTarget.style.transform='translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  if (submitting) return;
+                  e.currentTarget.style.background='#1c2c72';
+                  e.currentTarget.style.transform='none';
+                }}
+              >
+                {submitting ? 'Sending...' : 'Send message'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// FOOTER
+// ─────────────────────────────────────────────────────────────
+const Footer = ({ onNav }) => {
+  const navLinks  = ['Home', 'About', 'Solutions', 'Team', 'Contact'];
+  const solutions = ['AI Clinical Decision Support', 'EHR/EMR & AVS', 'AutoPrep', 'CDI', 'ABHA Integration'];
+  const socials   = ['fa-linkedin', 'fa-twitter', 'fa-instagram'];
+
+  return (
+    <footer style={{ background:'#0d1633' }}>
+      {/* CTA band */}
+      <div style={{ background:'#1c2c72', padding:'64px 40px', textAlign:'center' }}>
+        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.5rem,3vw,2.5rem)', fontWeight:400, color:'#fff', marginBottom:16 }}>
+          Ready to operate at a higher standard?
+        </h2>
+        <p style={{ fontFamily:'Gotham,sans-serif', fontSize:16, color:'rgba(255,255,255,0.65)', maxWidth:440, margin:'0 auto 32px', lineHeight:1.7 }}>
+          Join doctors and institutions building the next standard of care delivery.
+        </p>
+        <button
+          onClick={() => onNav('contact')}
+          style={{
+            fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600,
+            background:'#fff', color:'#1c2c72', border:'none', cursor:'pointer',
+            padding:'14px 36px', borderRadius:'9999px', transition:'all .2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(0,0,0,0.2)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}
+        >
+          Book a demo
+        </button>
+      </div>
+
+      {/* Main footer body */}
+      <div style={{ padding:'60px 40px 40px', maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1.5fr', gap:48, marginBottom:48 }}>
+          {/* Brand column */}
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+              <img src="./assets/stationery-09.png" style={{ height:32, filter:'brightness(0) invert(1)' }} alt="One Theracure" />
+              <span style={{ fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:700, color:'#fff' }}>onetheracure</span>
+            </div>
+            <p style={{ fontFamily:'Gotham,sans-serif', fontSize:13, color:'rgba(255,255,255,0.48)', lineHeight:1.75, maxWidth:260 }}>
+              The workflow layer for modern healthcare delivery. Doctor-first. Precisely built.
+            </p>
+            <p style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.3)', marginTop:12, fontStyle:'italic' }}>Enhancing Life.</p>
+          </div>
+
+          {/* Navigation column */}
+          <div>
+            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'rgba(255,255,255,0.38)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:16 }}>Navigation</div>
+            {navLinks.map(l => (
+              <div key={l} style={{ marginBottom:10 }}>
+                <a
+                  href="#"
+                  onClick={e => { e.preventDefault(); onNav(l.toLowerCase()); }}
+                  style={{ fontFamily:'Gotham,sans-serif', fontSize:13, color:'rgba(255,255,255,0.58)', textDecoration:'none', transition:'color .2s' }}
+                  onMouseEnter={e => e.target.style.color = '#fff'}
+                  onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.58)'}
+                >
+                  {l}
+                </a>
+              </div>
+            ))}
+          </div>
+
+          {/* Solutions column */}
+          <div>
+            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'rgba(255,255,255,0.38)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:16 }}>Solutions</div>
+            {solutions.map(s => (
+              <div key={s} style={{ marginBottom:10 }}>
+                <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Contact column */}
+          <div>
+            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'rgba(255,255,255,0.38)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:16 }}>Contact</div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+              <i className="fas fa-envelope" style={{ fontSize:13, color:'#4a7fb5' }} />
+              <a href="mailto:info@onetheracure.com" style={{ fontFamily:'Gotham,sans-serif', fontSize:13, color:'rgba(255,255,255,0.58)', transition:'color .2s' }}
+                onMouseEnter={e => e.target.style.color='#fff'}
+                onMouseLeave={e => e.target.style.color='rgba(255,255,255,0.58)'}>
+                info@onetheracure.com
+              </a>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:20 }}>
+              {socials.map(icon => (
+                <a key={icon} href="#" onClick={e => e.preventDefault()} style={{
+                  width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.08)',
+                  display:'flex', alignItems:'center', justifyContent:'center', transition:'background .2s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#1c2c72'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                >
+                  <i className={`fab ${icon}`} style={{ fontSize:14, color:'rgba(255,255,255,0.7)' }} />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.28)' }}>© 2025 One Theracure. All rights reserved.</span>
+          <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.28)' }}>India · Global</span>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// APP ROOT
+// ─────────────────────────────────────────────────────────────
+const App = () => {
+  const [activeSection, setActiveSection] = useState('home');
+
+  const scrollToSection = (id) => {
+    setActiveSection(id);
+    const el = document.getElementById(id);
+    if (el) {
+      const offset = 68;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) setActiveSection(e.target.id);
+        });
+      },
+      { threshold: 0.35, rootMargin: '-68px 0px 0px 0px' }
+    );
+    document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div>
+      <Header activeSection={activeSection} onNav={scrollToSection} />
+      <Hero onNav={scrollToSection} />
+      <About />
+      <Solutions />
+      <Team />
+      <Contact />
+      <Footer onNav={scrollToSection} />
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
