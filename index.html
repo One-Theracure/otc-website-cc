@@ -80,18 +80,34 @@ img { display: block; max-width: 100%; }
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+const useWindowWidth = () => {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handler, { passive: true });
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return width;
+};
+
 // ─────────────────────────────────────────────────────────────
 // HEADER
 // ─────────────────────────────────────────────────────────────
 const Header = ({ activeSection, onNav }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) setMenuOpen(false);
+  }, [isMobile]);
 
   const links = [
     { id: 'home',      label: 'Home' },
@@ -108,83 +124,161 @@ const Header = ({ activeSection, onNav }) => {
       : (active ? '#fff'    : 'rgba(255,255,255,0.72)');
 
   return (
-    <header style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      height: 68, padding: '0 40px',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: headerBg,
-      backdropFilter: scrolled ? 'blur(12px)' : 'none',
-      WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
-      borderBottom: scrolled ? '1px solid #dde3f0' : 'none',
-      transition: 'all 0.3s ease',
-    }}>
-      {/* Logo */}
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-        onClick={() => onNav('home')}
-        role="button"
-        aria-label="Go to homepage"
-      >
-        <img src="./assets/stationery-09.png" alt="One Theracure" style={{ height: 36 }} />
-        <span style={{
-          fontFamily: 'Gotham,sans-serif', fontSize: 16, fontWeight: 700,
-          color: scrolled ? '#1c2c72' : 'rgba(255,255,255,0.9)',
-          letterSpacing: '-0.01em', transition: 'color 0.3s',
-        }}>
-          <span style={{ fontWeight: 400 }}>one</span><strong style={{ fontWeight: 700 }}>theracure</strong>
-        </span>
-      </div>
-
-      {/* Desktop nav */}
-      <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-        {links.map(l => {
-          const active = activeSection === l.id;
-          return (
-            <a
-              key={l.id}
-              href={`#${l.id}`}
-              onClick={e => { e.preventDefault(); onNav(l.id); setMenuOpen(false); }}
-              style={{
-                fontFamily: 'Gotham,sans-serif', fontSize: 14,
-                fontWeight: active ? 600 : 400,
-                color: textColor(active),
-                textDecoration: 'none', transition: 'color .2s',
-                borderBottom: active ? `2px solid ${scrolled ? '#1c2c72' : '#fff'}` : '2px solid transparent',
-                paddingBottom: 2,
-              }}
-              aria-current={active ? 'page' : undefined}
-            >
-              {l.label}
-            </a>
-          );
-        })}
-        <button
-          onClick={() => onNav('contact')}
-          style={{
-            fontFamily: 'Gotham,sans-serif', fontSize: 14, fontWeight: 600,
-            background: '#1c2c72', color: '#fff', border: 'none', cursor: 'pointer',
-            padding: '9px 22px', borderRadius: '9999px', transition: 'all .2s ease',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#2d4199'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#1c2c72'; e.currentTarget.style.transform = 'none'; }}
+    <>
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        height: 68, padding: isMobile ? '0 20px' : '0 40px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: headerBg,
+        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
+        borderBottom: scrolled ? '1px solid #dde3f0' : 'none',
+        transition: 'all 0.3s ease',
+      }}>
+        {/* Logo */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          onClick={() => onNav('home')}
+          role="button"
+          aria-label="Go to homepage"
         >
-          Book a demo
-        </button>
-      </nav>
-    </header>
+          <img src="./assets/stationery-09.png" alt="One Theracure" style={{ height: 36 }} />
+          <span style={{
+            fontFamily: 'Gotham,sans-serif', fontSize: 16, fontWeight: 700,
+            color: scrolled ? '#1c2c72' : 'rgba(255,255,255,0.9)',
+            letterSpacing: '-0.01em', transition: 'color 0.3s',
+          }}>
+            <span style={{ fontWeight: 400 }}>one</span><strong style={{ fontWeight: 700 }}>theracure</strong>
+          </span>
+        </div>
+
+        {/* Desktop nav */}
+        {!isMobile && (
+          <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+            {links.map(l => {
+              const active = activeSection === l.id;
+              return (
+                <a
+                  key={l.id}
+                  href={`#${l.id}`}
+                  onClick={e => { e.preventDefault(); onNav(l.id); }}
+                  style={{
+                    fontFamily: 'Gotham,sans-serif', fontSize: 14,
+                    fontWeight: active ? 600 : 400,
+                    color: textColor(active),
+                    textDecoration: 'none', transition: 'color .2s',
+                    borderBottom: active ? `2px solid ${scrolled ? '#1c2c72' : '#fff'}` : '2px solid transparent',
+                    paddingBottom: 2,
+                  }}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {l.label}
+                </a>
+              );
+            })}
+            <button
+              onClick={() => onNav('contact')}
+              style={{
+                fontFamily: 'Gotham,sans-serif', fontSize: 14, fontWeight: 600,
+                background: '#1c2c72', color: '#fff', border: 'none', cursor: 'pointer',
+                padding: '9px 22px', borderRadius: '9999px', transition: 'all .2s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#2d4199'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#1c2c72'; e.currentTarget.style.transform = 'none'; }}
+            >
+              Book a demo
+            </button>
+          </nav>
+        )}
+
+        {/* Hamburger button */}
+        {isMobile && (
+          <button
+            onClick={() => setMenuOpen(m => !m)}
+            aria-label="Toggle navigation"
+            aria-expanded={menuOpen}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 8, display: 'flex', flexDirection: 'column',
+              gap: 5, alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {[0, 1, 2].map(i => (
+              <span key={i} style={{
+                display: 'block', width: 22, height: 2, borderRadius: 1,
+                background: scrolled ? '#1c2c72' : '#fff',
+                transition: 'all 0.3s ease',
+                ...(menuOpen && i === 0 ? { transform: 'translateY(7px) rotate(45deg)' } : {}),
+                ...(menuOpen && i === 1 ? { opacity: 0, transform: 'scaleX(0)' } : {}),
+                ...(menuOpen && i === 2 ? { transform: 'translateY(-7px) rotate(-45deg)' } : {}),
+              }} />
+            ))}
+          </button>
+        )}
+      </header>
+
+      {/* Mobile dropdown menu */}
+      {isMobile && menuOpen && (
+        <div style={{
+          position: 'fixed', top: 68, left: 0, right: 0, zIndex: 99,
+          background: 'rgba(255,255,255,0.98)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid #dde3f0',
+          padding: '8px 24px 24px',
+          boxShadow: '0 8px 32px rgba(28,44,114,0.12)',
+        }}>
+          {links.map(l => {
+            const active = activeSection === l.id;
+            return (
+              <a
+                key={l.id}
+                href={`#${l.id}`}
+                onClick={e => { e.preventDefault(); onNav(l.id); setMenuOpen(false); }}
+                style={{
+                  display: 'block',
+                  fontFamily: 'Gotham,sans-serif', fontSize: 15,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? '#1c2c72' : '#3d4d74',
+                  padding: '14px 0',
+                  borderBottom: '1px solid #edf0f9',
+                  textDecoration: 'none',
+                }}
+              >
+                {l.label}
+              </a>
+            );
+          })}
+          <button
+            onClick={() => { onNav('contact'); setMenuOpen(false); }}
+            style={{
+              marginTop: 16, width: '100%',
+              fontFamily: 'Gotham,sans-serif', fontSize: 14, fontWeight: 600,
+              background: '#1c2c72', color: '#fff', border: 'none', cursor: 'pointer',
+              padding: '13px 24px', borderRadius: '9999px',
+            }}
+          >
+            Book a demo
+          </button>
+        </div>
+      )}
+    </>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
 // HERO
 // ─────────────────────────────────────────────────────────────
-const Hero = ({ onNav }) => (
+const Hero = ({ onNav }) => {
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
+  return (
   <section id="home" style={{
     minHeight: '100vh', width: '100%',
     background: 'linear-gradient(135deg, #111d54 0%, #1c2c72 50%, #2d4199 100%)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexDirection: 'column', textAlign: 'center',
-    padding: '120px 40px 80px',
+    padding: isMobile ? '100px 24px 72px' : '120px 40px 80px',
     position: 'relative', overflow: 'hidden',
   }}>
     {/* Background circles */}
@@ -259,16 +353,24 @@ const Hero = ({ onNav }) => (
       <div style={{ width:1, height:48, background:'linear-gradient(to bottom, transparent, #fff)', margin:'0 auto' }} />
     </div>
   </section>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────
 // ABOUT
 // ─────────────────────────────────────────────────────────────
-const About = () => (
-  <section id="about" style={{ background:'#fff', padding:'100px 40px' }}>
+const About = () => {
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
+  const isTablet = width <= 1024;
+  return (
+  <section id="about" style={{ background:'#fff', padding: isMobile ? '72px 24px' : '100px 40px' }}>
     <div style={{
       maxWidth:1100, margin:'0 auto',
-      display:'grid', gridTemplateColumns:'1fr 1fr', gap:80, alignItems:'center',
+      display:'grid',
+      gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr',
+      gap: isMobile ? 48 : 80,
+      alignItems:'center',
     }}>
       <div>
         <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:16 }}>About One Theracure</div>
@@ -296,14 +398,14 @@ const About = () => (
         </div>
       </div>
 
-      <div style={{ position:'relative' }}>
+      <div style={{ position:'relative', marginBottom: !isMobile ? 0 : 0 }}>
         <div style={{
           background:'linear-gradient(135deg, #1c2c72 0%, #2d4199 100%)',
-          borderRadius:24, padding:'40px 36px', color:'#fff',
+          borderRadius:24, padding: isMobile ? '32px 24px' : '40px 36px', color:'#fff',
           boxShadow:'0 20px 60px rgba(28,44,114,0.25)',
         }}>
           <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.45)', marginBottom:16 }}>Our mission</div>
-          <blockquote style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:22, fontWeight:400, color:'#fff', lineHeight:1.5, borderLeft:'3px solid #4a7fb5', paddingLeft:20, marginBottom:28 }}>
+          <blockquote style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize: isMobile ? 18 : 22, fontWeight:400, color:'#fff', lineHeight:1.5, borderLeft:'3px solid #4a7fb5', paddingLeft:20, marginBottom:28 }}>
             "One Theracure is building the workflow standard for modern healthcare delivery."
           </blockquote>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
@@ -316,23 +418,26 @@ const About = () => (
           </div>
         </div>
 
-        {/* Floating badge */}
-        <div style={{
-          position:'absolute', bottom:-20, left:-20,
-          background:'#fff', borderRadius:14, padding:'14px 18px',
-          boxShadow:'0 8px 24px rgba(28,44,114,0.15)',
-          display:'flex', alignItems:'center', gap:12,
-        }}>
-          <img src="./assets/logo-icon.png" style={{ height:32 }} alt="One Theracure icon" />
-          <div>
-            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:700, color:'#1c2c72' }}>Enhancing Life.</div>
-            <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, color:'#8892b0' }}>onetheracure.com</div>
+        {/* Floating badge — hidden on mobile to avoid overflow on single-column layout */}
+        {!isMobile && (
+          <div style={{
+            position:'absolute', bottom:-20, left:-20,
+            background:'#fff', borderRadius:14, padding:'14px 18px',
+            boxShadow:'0 8px 24px rgba(28,44,114,0.15)',
+            display:'flex', alignItems:'center', gap:12,
+          }}>
+            <img src="./assets/logo-icon.png" style={{ height:32 }} alt="One Theracure icon" />
+            <div>
+              <div style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:700, color:'#1c2c72' }}>Enhancing Life.</div>
+              <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, color:'#8892b0' }}>onetheracure.com</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   </section>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────
 // SOLUTIONS
@@ -376,8 +481,11 @@ const SolutionCard = ({ icon, title, desc }) => {
   );
 };
 
-const Solutions = () => (
-  <section id="solutions" style={{ background:'#f5f7fc', padding:'100px 40px' }}>
+const Solutions = () => {
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
+  return (
+  <section id="solutions" style={{ background:'#f5f7fc', padding: isMobile ? '72px 24px' : '100px 40px' }}>
     <div style={{ maxWidth:1100, margin:'0 auto' }}>
       <div style={{ textAlign:'center', marginBottom:64 }}>
         <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>What we build</div>
@@ -388,12 +496,13 @@ const Solutions = () => (
           Every solution is designed around how doctors and institutions actually work — not how software thinks they should.
         </p>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:20 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap:20 }}>
         {SOLUTIONS.map((s, i) => <SolutionCard key={i} {...s} />)}
       </div>
     </div>
   </section>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────
 // TEAM
@@ -406,13 +515,17 @@ const TEAM = [
 
 const TeamCard = ({ name, role, cred, img }) => {
   const [hovered, setHovered] = useState(false);
+  const width = useWindowWidth();
+  const isMobile = width <= 640;
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         background:'#fff', borderRadius:20, padding:'32px 24px',
-        textAlign:'center', width:230,
+        textAlign:'center',
+        flex: isMobile ? '0 0 100%' : '0 0 230px',
+        maxWidth: isMobile ? '100%' : 280,
         boxShadow: hovered ? '0 12px 40px rgba(28,44,114,0.16)' : '0 2px 12px rgba(28,44,114,0.08)',
         transform: hovered ? 'translateY(-6px)' : 'none',
         transition:'all 0.3s ease',
@@ -422,6 +535,7 @@ const TeamCard = ({ name, role, cred, img }) => {
         width:88, height:88, borderRadius:'50%', objectFit:'cover',
         border: `3px solid ${hovered ? '#1c2c72' : '#edf0f9'}`,
         marginBottom:16, transition:'border-color .3s',
+        display:'block', margin:'0 auto 16px',
       }} />
       <div style={{ fontFamily:'Gotham,sans-serif', fontSize:15, fontWeight:600, color:'#0d1633', marginBottom:4 }}>{name}</div>
       <div style={{ fontFamily:'Gotham,sans-serif', fontSize:12, fontWeight:500, color:'#1c2c72', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>{role}</div>
@@ -442,8 +556,11 @@ const TeamCard = ({ name, role, cred, img }) => {
   );
 };
 
-const Team = () => (
-  <section id="team" style={{ background:'#fff', padding:'100px 40px' }}>
+const Team = () => {
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
+  return (
+  <section id="team" style={{ background:'#fff', padding: isMobile ? '72px 24px' : '100px 40px' }}>
     <div style={{ maxWidth:1100, margin:'0 auto' }}>
       <div style={{ textAlign:'center', marginBottom:64 }}>
         <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>The people</div>
@@ -456,7 +573,8 @@ const Team = () => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────
 // CONTACT
@@ -467,6 +585,8 @@ const Contact = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const formEndpoint = 'https://formspree.io/f/mzdopbkq';
+  const width = useWindowWidth();
+  const isMobile = width <= 768;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -513,8 +633,11 @@ const Contact = () => {
     outline:'none', color:'#0d1633', background:'#fff', transition:'border-color .2s',
   };
 
+  const cols = isMobile ? '1fr' : '1fr 1fr';
+  const fullSpan = isMobile ? 'span 1' : 'span 2';
+
   return (
-    <section id="contact" style={{ background:'#f5f7fc', padding:'100px 40px' }}>
+    <section id="contact" style={{ background:'#f5f7fc', padding: isMobile ? '72px 24px' : '100px 40px' }}>
       <div style={{ maxWidth:800, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:56 }}>
           <div style={{ fontFamily:'Gotham,sans-serif', fontSize:11, fontWeight:600, color:'#1c2c72', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>Get in touch</div>
@@ -525,7 +648,7 @@ const Contact = () => {
         </div>
 
         {submitted ? (
-          <div style={{ background:'#fff', borderRadius:20, padding:'60px 40px', textAlign:'center', boxShadow:'0 4px 24px rgba(28,44,114,0.1)' }}>
+          <div style={{ background:'#fff', borderRadius:20, padding: isMobile ? '48px 24px' : '60px 40px', textAlign:'center', boxShadow:'0 4px 24px rgba(28,44,114,0.1)' }}>
             <div style={{ width:64, height:64, borderRadius:'50%', background:'#ecfdf5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
               <i className="fas fa-check" style={{ fontSize:24, color:'#2e7d52' }} />
             </div>
@@ -537,14 +660,14 @@ const Contact = () => {
             onSubmit={handleSubmit}
             action={formEndpoint}
             method="POST"
-            style={{ background:'#fff', borderRadius:20, padding:'40px', boxShadow:'0 4px 24px rgba(28,44,114,0.08)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}
+            style={{ background:'#fff', borderRadius:20, padding: isMobile ? '28px 20px' : '40px', boxShadow:'0 4px 24px rgba(28,44,114,0.08)', display:'grid', gridTemplateColumns: cols, gap:20 }}
           >
             {[
               { id:'name',  label:'Your name',        placeholder:'Dr. Priya Sharma',         span:false, type:'text' },
               { id:'org',   label:'Clinic / hospital', placeholder:'Apollo Hospitals, Mumbai', span:false, type:'text' },
               { id:'email', label:'Email address',     placeholder:'dr.sharma@hospital.in',    span:true,  type:'email' },
             ].map(f => (
-              <div key={f.id} style={{ gridColumn: f.span ? 'span 2' : 'auto' }}>
+              <div key={f.id} style={{ gridColumn: f.span ? fullSpan : 'auto' }}>
                 <label style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:500, color:'#3d4d74', display:'block', marginBottom:6 }}>{f.label}</label>
                 <input
                   type={f.type}
@@ -559,7 +682,7 @@ const Contact = () => {
                 />
               </div>
             ))}
-            <div style={{ gridColumn:'span 2' }}>
+            <div style={{ gridColumn: fullSpan }}>
               <label style={{ fontFamily:'Gotham,sans-serif', fontSize:13, fontWeight:500, color:'#3d4d74', display:'block', marginBottom:6 }}>Describe your workflow needs</label>
               <textarea
                 rows={4}
@@ -573,11 +696,11 @@ const Contact = () => {
               />
             </div>
             {error && (
-              <div style={{ gridColumn:'span 2', fontFamily:'Gotham,sans-serif', fontSize:13, color:'#b42318' }}>
+              <div style={{ gridColumn: fullSpan, fontFamily:'Gotham,sans-serif', fontSize:13, color:'#b42318' }}>
                 {error}
               </div>
             )}
-            <div style={{ gridColumn:'span 2' }}>
+            <div style={{ gridColumn: fullSpan }}>
               <button
                 type="submit"
                 disabled={submitting}
@@ -587,6 +710,7 @@ const Contact = () => {
                   color:'#fff', border:'none', cursor: submitting ? 'not-allowed' : 'pointer',
                   padding:'14px 40px', borderRadius:'9999px', transition:'all .2s',
                   opacity: submitting ? 0.85 : 1,
+                  width: isMobile ? '100%' : 'auto',
                 }}
                 onMouseEnter={e => {
                   if (submitting) return;
@@ -616,11 +740,16 @@ const Footer = ({ onNav }) => {
   const navLinks  = ['Home', 'About', 'Solutions', 'Team', 'Contact'];
   const solutions = ['AI Clinical Decision Support', 'EHR/EMR & AVS', 'AutoPrep', 'CDI', 'ABHA Integration'];
   const socials   = ['fa-linkedin', 'fa-twitter', 'fa-instagram'];
+  const width = useWindowWidth();
+  const isMobile = width <= 640;
+  const isTablet = width <= 1024;
+
+  const footerGrid = isMobile ? '1fr' : isTablet ? '1fr 1fr' : '2fr 1fr 1fr 1.5fr';
 
   return (
     <footer style={{ background:'#0d1633' }}>
       {/* CTA band */}
-      <div style={{ background:'#1c2c72', padding:'64px 40px', textAlign:'center' }}>
+      <div style={{ background:'#1c2c72', padding: isMobile ? '48px 24px' : '64px 40px', textAlign:'center' }}>
         <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(1.5rem,3vw,2.5rem)', fontWeight:400, color:'#fff', marginBottom:16 }}>
           Ready to operate at a higher standard?
         </h2>
@@ -642,8 +771,8 @@ const Footer = ({ onNav }) => {
       </div>
 
       {/* Main footer body */}
-      <div style={{ padding:'60px 40px 40px', maxWidth:1100, margin:'0 auto' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1.5fr', gap:48, marginBottom:48 }}>
+      <div style={{ padding: isMobile ? '48px 24px 32px' : '60px 40px 40px', maxWidth:1100, margin:'0 auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns: footerGrid, gap: isMobile ? 36 : 48, marginBottom:48 }}>
           {/* Brand column */}
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
@@ -712,7 +841,12 @@ const Footer = ({ onNav }) => {
         </div>
 
         {/* Bottom bar */}
-        <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:24, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{
+          borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:24,
+          display:'flex', flexDirection: isMobile ? 'column' : 'row',
+          justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? 8 : 0,
+        }}>
           <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.28)' }}>© 2025 One Theracure. All rights reserved.</span>
           <span style={{ fontFamily:'Gotham,sans-serif', fontSize:12, color:'rgba(255,255,255,0.28)' }}>India · Global</span>
         </div>
