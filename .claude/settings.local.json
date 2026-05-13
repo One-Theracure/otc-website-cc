@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:api.anthropic.com)"
+      "WebFetch(domain:api.anthropic.com)",
+      "PowerShell(Get-ChildItem \"c:\\\\ATHARV\\\\OneTheraCure\\\\website-claude-design\\\\.vercel\\\\output\\\\\" -Recurse | Select-Object FullName, Length | Where-Object { $_.Length -ne $null })"
     ]
   }
 }
