@@ -25,12 +25,51 @@ await esbuild.build({
   outfile: join(fnDir, 'server.mjs'),
 })
 
-// Thin entry wrapper — adapts server.fetch (Web API) to what Vercel invokes.
+// Entry wrapper — adapts Node.js (req, res) to server.fetch (Web API).
+// Vercel's launcherType:"Nodejs" always calls handlers with IncomingMessage/ServerResponse.
 writeFileSync(
   join(fnDir, 'index.mjs'),
   `import server from './server.mjs'
-export default async function handler(request) {
-  return server.fetch(request)
+
+export default async function handler(req, res) {
+  try {
+    const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim()
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost'
+    const url = new URL(req.url, proto + '://' + host)
+
+    const headers = new Headers()
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (v == null) continue
+      if (Array.isArray(v)) v.forEach(val => headers.append(k, val))
+      else headers.set(k, v)
+    }
+
+    const init = { method: req.method, headers }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      const chunks = []
+      for await (const chunk of req) chunks.push(chunk)
+      if (chunks.length) init.body = Buffer.concat(chunks)
+    }
+
+    const response = await server.fetch(new Request(url.toString(), init))
+
+    res.statusCode = response.status
+    for (const [k, v] of response.headers) res.setHeader(k, v)
+
+    if (response.body) {
+      const reader = response.body.getReader()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        res.write(value)
+      }
+    }
+    res.end()
+  } catch (err) {
+    console.error('SSR handler error:', err)
+    res.statusCode = 500
+    res.end('Internal Server Error')
+  }
 }
 `,
 )
