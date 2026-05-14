@@ -13,25 +13,25 @@ mkdirSync(fnDir, { recursive: true })
 // Copy client assets → served as static files at /assets/...
 cpSync(join(root, 'dist', 'client'), join(outDir, 'static'), { recursive: true })
 
-// Bundle the SSR server + all npm deps into one self-contained file.
-// --external:node:* keeps Node built-ins (async_hooks, stream, etc.) as-is.
+// Bundle the SSR server as CJS so that require() is defined and the
+// esbuild-generated __require shim works correctly at runtime.
 await esbuild.build({
   entryPoints: [join(root, 'dist', 'server', 'server.js')],
   bundle: true,
   platform: 'node',
   target: 'node22',
-  format: 'esm',
-  external: ['node:*'],
-  outfile: join(fnDir, 'server.mjs'),
+  format: 'cjs',
+  outfile: join(fnDir, 'server.cjs'),
 })
 
 // Entry wrapper — adapts Node.js (req, res) to server.fetch (Web API).
 // Vercel's launcherType:"Nodejs" always calls handlers with IncomingMessage/ServerResponse.
 writeFileSync(
-  join(fnDir, 'index.mjs'),
-  `import server from './server.mjs'
+  join(fnDir, 'index.js'),
+  `'use strict'
+const { default: server } = require('./server.cjs')
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim()
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost'
@@ -74,9 +74,12 @@ export default async function handler(req, res) {
 `,
 )
 
+// Override parent "type":"module" — the function dir must be CommonJS.
+writeFileSync(join(fnDir, 'package.json'), JSON.stringify({ type: 'commonjs' }, null, 2))
+
 writeFileSync(
   join(fnDir, '.vc-config.json'),
-  JSON.stringify({ runtime: 'nodejs22.x', handler: 'index.mjs', launcherType: 'Nodejs' }, null, 2),
+  JSON.stringify({ runtime: 'nodejs22.x', handler: 'index.js', launcherType: 'Nodejs' }, null, 2),
 )
 
 writeFileSync(
